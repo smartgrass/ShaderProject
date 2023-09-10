@@ -68,7 +68,8 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _Angle: -136
+    - _: 1
+    - _Angle: -137.68
     - _BumpScale: 3.1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
@@ -82,7 +83,7 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _R: 0.26
+    - _R: 7
     - _ReflectAmount: 0.7
     - _RefractRatio: 0.711
     - _SmoothnessTextureChannel: 0
@@ -90,13 +91,22 @@ Material:
     - _SrcBlend: 1
     - _UVSec: 0
     - _ZWrite: 1
+    - _aspect: 1.7777778
+    - _band: 0.2
+    - _power: 1
+    - _progres: 0
+    - _radius: 0.5
+    - _speed: 1
+    - _test: 0
+    - _waves: 1
     - band: 0.5
-    - progres: 0
+    - progres: 0.304
     - radius: 0.5
     - speed: 0.81
     - waves: 1
     m_Colors:
-    - _BaseColor: {r: 1, g: 0.6650944, b: 0.6650944, a: 0}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _test: {r: 3.99, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []

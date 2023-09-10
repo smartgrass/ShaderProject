@@ -1,16 +1,18 @@
+// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+
 Shader "MyShader/Texture_GrabPass_TheWorld"
 {
     Properties
     {
 		_BaseColor("Base Color",Color) = (1.0,1.0,1.0,1.0)
 		_MainTex("Main Texture",2D) = "white"{}
-		 _Angle("_Angle",float) =  0
-		 _R("R",float) =  0.5
-		 progres("progres",Range(0,1)) =  0.5
-		 band("band",float) =  10
-		 radius("radius",float) =  20
-		 speed("speed",float) =  1
-		 waves("waves",int) =  1
+		_progres("progres进度",Range(0,1)) =  0.5
+		_radius("radius范围",Range(0,1)) =  0.5
+		_band("band宽度",Range(0,1)) = 0.1
+		_speed("speed",float) =  1
+		_power("power",float) =  1
+		_waves("waves",int) =  1
+		_aspect("_aspect屏幕宽高比",float) =  1
     }
     SubShader
     {
@@ -37,34 +39,25 @@ Shader "MyShader/Texture_GrabPass_TheWorld"
 
             struct outputData{
                 float4 pos : SV_POSITION;
-				float4 uv : TEXCOORD0;
+				float4 uv : TEXCOORD0;  //xy:原纹理uv zw:屏幕uv坐标
 				float4 pos2 : TEXCOORD1;
             };
 
 			sampler2D _GrabPassTexture;
 			sampler2D _MainTex;
 			fixed4 _BaseColor;
-			float _Angle;
-			float _R;
-			float progres;
-			float band;
-			float radius;
-			float waves;
-			float speed;
+			float _progres;
+			float _band;
+			float _radius;
+			float _waves;
+			float _speed;
+			float _power;
+			float _aspect;
+			float2 centerUV;
 
-            outputData vert(inputData i)
-            {
-                outputData o;
-                o.pos = UnityObjectToClipPos(i.vertex);
-				o.pos2 = i.vertex;
-				o.uv.xy = i.texcoord.xy;
 
-				fixed4 screenPos = ComputeGrabScreenPos(o.pos);
-				o.uv.zw = screenPos.xy/screenPos.w;
-				return o;
-            }
 			// RGB -> HSV 色彩空间
-			float3 RGB2HSV(float3 c)
+			float3 FRGB2HSV(float3 c)
 			{
 				float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
 				float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
@@ -75,124 +68,72 @@ Shader "MyShader/Texture_GrabPass_TheWorld"
 			}
 
 			//HSV -> RGB
-			float3 HSV2RGB(float3 c)
+			float3 FHSV2RGB(float3 c)
 			{
 				float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
 				float3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
 				return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
 			}
 
-			// float3 CausticTriTwist(float2 uv,float time )
-			// {
-				// const int MAX_ITER = 5;
-				// float2 p = fmod(uv*PI,PI )-250.0;//1.空间划分
-
-				// float2 i = float2(p);
-				// float c = 1.0;
-				// float inten = .005;
-
-				// for (int n = 0; n < MAX_ITER; n++) //3.多层叠加
-				// {
-				// 	float t = time * (1.0 - (3.5 / float(n+1)));
-				// 	i = p + float2(cos(t - i.x) + sin(t + i.y), sin(t - i.y) + cos(t + i.x));//2.空间扭曲
-				// 	c += 1.0/length(float2(p.x / (sin(i.x+t)/inten),p.y / (cos(i.y+t)/inten)));//集合操作avg
-				// }
-
-				// c /= float(MAX_ITER);
-				// c = 1.17-pow(c, 1.4);//4.亮度调整
-				// float val = pow(abs(c), 8.0);
-				// return val;
-			// }
-
-			float3 CausticTriTwist(float2 tc,float time )
+			//扭曲函数 屏幕
+			float2 FCausticTriTwist(float2 pointUv,float2 centerUV,float time)
 			{
-				// return float3(tc,0)
+				float wave_width = _band * _radius;
 
-				//public
-				float amp = 1;
+				//屏幕比例
+				float2 dir = (pointUv - centerUV);
+				dir.x = dir.x  * _aspect;
+				float len = length(dir);
 
-				//当前像素的uv坐标tc
-				float2 centre = float2(0.5,0.5);
-				float2 uv = float2(0.0, 0.0);
-				float2 p;
-				float len;
-				float2 uv_offset;
-				float wave_width = band * radius;
-
-				float aspect =1;
-
-				//纵横比 aspect (外部)
-				p = (tc - centre);
-				p.x = p.x * aspect;
-				len = length(p);
-
-				float current_progress = progres;
-				float current_radius = radius * current_progress;
-				float damp_factor = 1.0;
-				if (current_progress > .5) {
-				damp_factor = (1.0 - current_progress) * 2.0;
+				float current_progress = _progres;
+				float current_radius = _radius * current_progress;
+				float damp_factor = 1.0; //衰减系数
+				if (current_progress > 0.5) {
+					damp_factor = (1.0 - current_progress) * 2.0;
 				}
-
+				//裁剪系数
 				float cut_factor = clamp(wave_width * damp_factor - abs(current_radius - len), 0.0, 1.0);
-				float waves_factor = waves * len / radius;
-				uv_offset = (p / len) * cos((waves_factor - current_progress * speed) * 3.14) * amp * cut_factor;
+				float waves_factor = _waves * len / _radius;
+				float2 uv_offset = (dir / len) * cos((waves_factor - current_progress * _speed) * 3.14) * _power * cut_factor;
 
-				uv += uv_offset;
-
-				return float3(tc + uv,0);
+				return float2(pointUv + uv_offset);
 			}
 
-			/* 半径判断
-			if( distance(i.uv,float2(0.5,0.5)) > _R)
-			*/
+            outputData vert(inputData i)
+            {
+                outputData o;
+                o.pos = UnityObjectToClipPos(i.vertex);
+				o.pos2 = i.vertex;
+				o.uv.xy = i.texcoord.xy;
+
+				fixed4 screenPos = ComputeGrabScreenPos(o.pos); //计算屏幕坐标
+				o.uv.zw = screenPos.xy/screenPos.w; //屏幕uv坐标
+				return o;
+            }
 
 			fixed4 frag(outputData i):SV_TARGET{
 
 				fixed3 albedo =tex2D(_MainTex,i.uv.xy);
-
-
-
-				i.uv.xy=i.uv.zw;
-				//uv
-				float2 uv = i.uv;
 				float time = _Time.y;
-				float3 val = CausticTriTwist(uv,time);//替换相应的函数即可
 
-				fixed3 color = tex2D(_GrabPassTexture,val.xy).xyz *_BaseColor *albedo;
+
+				//中心UV
+				fixed4 centerPos =  ComputeGrabScreenPos(UnityObjectToClipPos(float3(0,0,0)));
+				centerUV = centerPos.xy/centerPos.w;
+
+				float2 newUV = FCausticTriTwist(i.uv.zw,centerUV,time);
+
+				fixed3 color = tex2D(_GrabPassTexture,newUV).xyz *_BaseColor *albedo;
 
 				//颜色变化
-				float3 hsvColor = RGB2HSV(color);
+				float3 hsvColor = FRGB2HSV(color);
 				hsvColor.x += lerp(0,0.2,sin( UNITY_TWO_PI * frac(_Time.y *0.5)));
 				hsvColor.x = frac(hsvColor.x);
 
-				hsvColor = HSV2RGB(hsvColor);
-
-				//反色
-				//hsvColor =  1 - hsvColor;
-
-				// float2 uv =  o.uv;
-
-				// return float3(val,val,val);
+				hsvColor = FHSV2RGB(hsvColor);
 
 				return float4 (hsvColor,1);
             }
-
-			/*ComputeGrabScreenPos 源码
-			ComputeGrabScreenPos(fixed4 pos){
-				#ifdef UNITY_UV_STARTS_AT_TOP
-					float scale = -1.0;
-				#else
-					float scale = 1.0;
-				#endif
-
-				float4 _currentPos = pos * 0.5;
-				_currentPos.xy = float2(_currentPos.x,_currentPos.y * scale) + _currentPos.w;
-				_currentPos.zw = pos.zw;
-				return _currentPos;
-			}
-			*/
-
-
             ENDCG
         }
     }

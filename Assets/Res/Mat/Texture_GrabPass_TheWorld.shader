@@ -13,6 +13,7 @@ Shader "MyShader/Texture_GrabPass_TheWorld"
 		_power("power",float) =  1
 		_waves("waves",int) =  1
 		_aspect("_aspect屏幕宽高比",float) =  1
+		_changeColor("changeColor",Range(0,1))=1
     }
     SubShader
     {
@@ -54,6 +55,7 @@ Shader "MyShader/Texture_GrabPass_TheWorld"
 			float _power;
 			float _aspect;
 			float2 centerUV;
+			float _changeColor;
 
 
 			// RGB -> HSV 色彩空间
@@ -117,21 +119,23 @@ Shader "MyShader/Texture_GrabPass_TheWorld"
 				float time = _Time.y;
 
 
+
 				//中心UV
 				fixed4 centerPos =  ComputeGrabScreenPos(UnityObjectToClipPos(float3(0,0,0)));
 				centerUV = centerPos.xy/centerPos.w;
 
 				float2 newUV = FCausticTriTwist(i.uv.zw,centerUV,time);
-
 				fixed3 color = tex2D(_GrabPassTexture,newUV).xyz *_BaseColor *albedo;
 
+				if(_changeColor<0.5){
+					return float4(color,1);
+				}
 				//颜色变化
 				float3 hsvColor = FRGB2HSV(color);
+
 				hsvColor.x += lerp(0,0.2,sin( UNITY_TWO_PI * frac(_Time.y *0.5)));
 				hsvColor.x = frac(hsvColor.x);
-
 				hsvColor = FHSV2RGB(hsvColor);
-
 				return float4 (hsvColor,1);
             }
             ENDCG

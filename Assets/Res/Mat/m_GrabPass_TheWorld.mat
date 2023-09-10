@@ -91,14 +91,15 @@ Material:
     - _SrcBlend: 1
     - _UVSec: 0
     - _ZWrite: 1
-    - _aspect: 1.7777778
-    - _band: 0.2
+    - _aspect: 0.52587116
+    - _band: 0.5
+    - _changeColor: 0.61
     - _power: 1
     - _progres: 0
-    - _radius: 0.5
+    - _radius: 0.8
     - _speed: 1
     - _test: 0
-    - _waves: 1
+    - _waves: 2
     - band: 0.5
     - progres: 0.304
     - radius: 0.5

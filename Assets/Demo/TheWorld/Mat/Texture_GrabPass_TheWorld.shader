@@ -30,7 +30,6 @@ Shader "MyShader/Texture_GrabPass_TheWorld"
 
 			#include "Lighting.cginc"
             #include "UnityCG.cginc"
-			#define PI 3.1415926
 
             struct inputData{
                 float4 vertex : POSITION;
@@ -90,11 +89,11 @@ Shader "MyShader/Texture_GrabPass_TheWorld"
 				float current_progress = _progres;
 				float current_radius = _radius * current_progress;
 				float damp_factor = 1.0; //衰减系数
-				if (current_progress > 0.5) {
+				if (current_progress > 0.7) {
 					damp_factor = (1.0 - current_progress) * 2.0;
 				}
 				//裁剪系数
-				float cut_factor = clamp(wave_width * damp_factor - abs(current_radius - len), 0.0, 1.0);
+				float cut_factor = clamp(wave_width * damp_factor*1.5 - abs(current_radius - len), 0, 1.0);
 				float waves_factor = _waves * len / _radius;
 				float2 uv_offset = (dir / len) * cos((waves_factor - current_progress * _speed) * 3.14) * _power * cut_factor;
 
@@ -117,7 +116,6 @@ Shader "MyShader/Texture_GrabPass_TheWorld"
 
 				fixed3 albedo =tex2D(_MainTex,i.uv.xy);
 				float time = _Time.y;
-
 
 
 				//中心UV

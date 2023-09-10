@@ -18,10 +18,12 @@ public class TheWorldControl : MonoBehaviour
 
     private int flag = 1;
 
+    private float _aspect = (float)Screen.width / Screen.height;
+
     private void OnEnable()
     {
         mat = mr.sharedMaterial;
-        mat.SetFloat("_aspect", (float)Screen.width /Screen.height);
+        mat.SetFloat("_aspect", _aspect);
         flag = 1;
         timer = 0;
         isRun = true;

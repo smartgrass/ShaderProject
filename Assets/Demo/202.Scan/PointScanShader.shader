@@ -4,6 +4,7 @@
     {
         _MainTex ("Texture", 2D) = "white" {}
 		_ScanTex("ScanTexure",2D) = "white"{}
+		_IsNetMesh("IsNetMesh",Range(0,1)) = 0
 		_ScanRange("ScanRange",float) = 0
 		_ScanWidth("ScanWidth",float) = 0
 		_ScanBgColor("ScanBgColor",color)=(1,1,1,1)
@@ -75,41 +76,46 @@
 			float _MeshWidth;
 			float4x4 _CamToWorld;
 			fixed _Smoothness;
-			
+			fixed _IsNetMesh;
+
 			sampler2D_float _CameraDepthTexture;
 			sampler2D _CameraDepthNormalsTexture;
 
-            fixed4 frag (v2f i) : SV_Target
-            {
-				float tempDepth;
-				half3 normal;  
-				DecodeDepthNormal(tex2D(_CameraDepthNormalsTexture, i.uv), tempDepth, normal);  
-				normal = mul( (float3x3)_CamToWorld, normal);  
-				normal = normalize(max(0, (abs(normal) - _Smoothness)));
-				//return fixed4(abs( normal),1);
-
-                fixed4 col = tex2D(_MainTex, i.uv);
-				float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv_depth);
-				float linearDepth = Linear01Depth(depth);
-
-				float3 pixelWorldPos =_WorldSpaceCameraPos+linearDepth*i.interpolatedRay;
-
-				float pixelDistance = distance(pixelWorldPos , _ScanCenter);
-
-				float3 pixelDir = pixelWorldPos - _ScanCenter;
-
+			//网格颜色
+			fixed4 GetNetMeshCol(float3 pixelWorldPos,float2 uv){
 				float3 modulo = pixelWorldPos - _MeshWidth*floor(pixelWorldPos/_MeshWidth);
 				modulo = modulo/_MeshWidth;
-
 				float3 meshCol = smoothstep(_MeshLineWidth,0,modulo)+smoothstep(1-_MeshLineWidth,1,modulo);
-				fixed4 scanMeshCol = lerp(_ScanBgColor,_ScanMeshColor,saturate(dot(meshCol,1-normal)));
-				
 
+				half3 normal;  				
+				float tempDepth;
+				DecodeDepthNormal(tex2D(_CameraDepthNormalsTexture, uv), tempDepth, normal);  
+				normal = mul( (float3x3)_CamToWorld, normal);  
+				normal = normalize(max(0, (abs(normal) - _Smoothness)));
+				fixed4 scanMeshCol = lerp(_ScanBgColor,_ScanMeshColor,saturate(dot(meshCol,1-normal)));
+				return scanMeshCol;
+			}
+
+
+            fixed4 frag (v2f i) : SV_Target
+            {
+				float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv_depth);
+				float linearDepth = Linear01Depth(depth);
+				float3 pixelWorldPos =_WorldSpaceCameraPos+linearDepth*i.interpolatedRay;
+				float pixelDistance = distance(pixelWorldPos,_ScanCenter);
+
+				fixed4 scanMeshCol = _ScanMeshColor;
+
+				//是否网格
+				if(_IsNetMesh){
+					scanMeshCol = GetNetMeshCol(pixelWorldPos,i.uv);
+				}
+
+				fixed4 col = tex2D(_MainTex, i.uv);
 				if(_ScanRange - pixelDistance > 0 && _ScanRange - pixelDistance <_ScanWidth &&linearDepth<1){
 					fixed scanPercent = 1 - (_ScanRange - pixelDistance)/_ScanWidth;
 					col = lerp(col,scanMeshCol,scanPercent);
 				}
-
                 return col;
             }
             ENDCG
